@@ -248,6 +248,24 @@ public class PersistManager {
    */
   public void importFiles(String path, String pattern, ArrayList<String> files, ArrayList<String> keys, ArrayList<String> fails, ArrayList<String> dels) {
     String s = path.toLowerCase(); // path must not be null
+
+    //Check for a glob in the path.
+    //In this case a glob is the following:
+    //1."*" (matches any number of any characters including none)
+    //2."?" (matches any single character)
+    //3."[]"(matches anything in brackets)
+    if(path.contains("*") || path.contains("?") || path.contains("[")){
+      pattern = getGlob(path);
+      path = path.replace(pattern,""); //Subset "path" by removing "pattern"
+      //Do some replacements to comply with equivalent Java regex
+      if(pattern.contains("*")){
+        pattern = pattern.replace("*",".*");
+      }
+      if(pattern.contains("?")){
+        pattern = pattern.replace("?",".");
+      }
+    }
+
     if( s.startsWith("http:") || s.startsWith("https:") ) {
       try {
         java.net.URL url = new URL(path);
@@ -548,4 +566,24 @@ public class PersistManager {
     return wholeString.substring(adjustedPosSubstring);
   }
 
+  /**
+   * Search through a string representing a path and make a regex pattern if globs are present
+   * @param path A string that is a file path
+   * @return string that represents a pattern based on globs in path
+   */
+  private static String getGlob(String path) {
+    String pattern = null;
+    //Check path for a glob in path.
+    String[] pathSplit = path.split("(?=\\\\|/)", -1); //Split path by backward/forward slashes
+    for (int i = 0; i < pathSplit.length; i++) {
+      if (pathSplit[i].contains("*") || pathSplit[i].contains("?") || pathSplit[i].contains("[")) {
+        if (pattern == null || pattern.isEmpty()) {
+          pattern = pathSplit[i];
+        } else {
+          pattern = pattern.concat(pathSplit[i]);
+        }
+      }
+    }
+    return pattern;
+  }
 }
